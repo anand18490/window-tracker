@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Window Measurement Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-blue-800">Aluminum Window Tracker</h1>
+            <p class="text-gray-600">Site Measurement Tool</p>
+        </header>
+
+        <!-- Input Form -->
+        <div class="card p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">Add New Measurement</h2>
+            <form id="windowForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium">Window ID / Label</label>
+                    <input type="text" id="windowId" placeholder="e.g. Living Room 01" class="w-full p-2 border rounded mt-1" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Type</label>
+                    <select id="windowType" class="w-full p-2 border rounded mt-1">
+                        <option value="Sliding">Sliding</option>
+                        <option value="Casement">Casement</option>
+                        <option value="Fixed">Fixed</option>
+                        <option value="Folding">Folding</option>
+                        <option value="Awning">Awning</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Width (mm)</label>
+                    <input type="number" id="width" placeholder="1200" class="w-full p-2 border rounded mt-1" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Height (mm)</label>
+                    <input type="number" id="height" placeholder="1500" class="w-full p-2 border rounded mt-1" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium">Frame Color / Notes</label>
+                    <input type="text" id="notes" placeholder="e.g. Black Powder Coated" class="w-full p-2 border rounded mt-1">
+                </div>
+                <button type="submit" class="md:col-span-2 bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700 transition">
+                    SAVE MEASUREMENT
+                </button>
+            </form>
+        </div>
+
+        <!-- List Display -->
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Recorded Windows</h2>
+                <button onclick="exportToCSV()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">
+                    Export to CSV (Excel)
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="p-2 border">ID</th>
+                            <th class="p-2 border">Type</th>
+                            <th class="p-2 border">W x H</th>
+                            <th class="p-2 border">Notes</th>
+                            <th class="p-2 border">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data will appear here -->
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="clearAll()" class="mt-6 text-red-500 text-sm underline">Clear All Data</button>
+        </div>
+    </div>
+
+    <script>
+        let windows = JSON.parse(localStorage.getItem('windowData')) || [];
+
+        const windowForm = document.getElementById('windowForm');
+        const tableBody = document.getElementById('tableBody');
+
+        // Save Data
+        windowForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newData = {
+                id: document.getElementById('windowId').value,
+                type: document.getElementById('windowType').value,
+                width: document.getElementById('width').value,
+                height: document.getElementById('height').value,
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().toISOString()
+            };
+
+            windows.push(newData);
+            localStorage.setItem('windowData', JSON.stringify(windows));
+            windowForm.reset();
+            renderTable();
+        });
+
+        // Render Table
+        function renderTable() {
+            tableBody.innerHTML = '';
+            windows.forEach((item, index) => {
+                const row = `
+                    <tr class="border-b">
+                        <td class="p-2 border">${item.id}</td>
+                        <td class="p-2 border">${item.type}</td>
+                        <td class="p-2 border">${item.width} x ${item.height}</td>
+                        <td class="p-2 border">${item.notes}</td>
+                        <td class="p-2 border text-center">
+                            <button onclick="deleteItem(${index})" class="text-red-600 font-bold">X</button>
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // Delete Item
+        function deleteItem(index) {
+            windows.splice(index, 1);
+            localStorage.setItem('windowData', JSON.stringify(windows));
+            renderTable();
+        }
+
+        // Clear All
+        function clearAll() {
+            if(confirm("Delete all records?")) {
+                windows = [];
+                localStorage.setItem('windowData', JSON.stringify(windows));
+                renderTable();
+            }
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if(windows.length === 0) {
+                alert("No data to export!");
+                return;
+            }
+            let csvContent = "ID,Type,Width,Height,Notes,Timestamp\n";
+            windows.forEach(item => {
+                csvContent += `"${item.id}","${item.type}","${item.width}","${item.height}","${item.notes}","${item.timestamp}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'window_measurements.csv');
+            link.click();
+        }
+
+        // Initial Load
+        renderTable();
+    </script>
+</body>
+</html>
